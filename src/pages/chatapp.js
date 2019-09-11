@@ -100,9 +100,9 @@ export class chatapp extends React.Component {
         ipfsId: ipfsId.id,
       })
 
-      //try connection
-      await _this.repeatedConnect(ipfs)
-      //await _this.state.ipfs.swarm.connect(MASTER_MULTIADDR)
+      // Connect to the chat server.
+      // Multiple connections will blacklist the server.
+      await _this.state.ipfs.swarm.connect(MASTER_MULTIADDR)
       console.log(`Connected to master node.`)
 
       //Instantiated db key value for store my username
