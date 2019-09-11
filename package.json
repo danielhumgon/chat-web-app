@@ -20,7 +20,7 @@
     "react-dom": "^16.8.5",
     "react-helmet": "^5.2.0",
     "styled-components": "^4.2.0",
-    "ipfs": "^0.33.1",
+    "ipfs": "^0.37.1",
     "orbit-db": "^0.22.0-rc4"
   },
   "keywords": [
