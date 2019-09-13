@@ -351,7 +351,7 @@ export class chatapp extends React.Component {
   async queryGet() {
     console.log("query get")
     try {
-      let latestMessages = db.iterator({ limit: 100 }).collect()
+      let latestMessages = db.iterator({ limit: 10 }).collect()
       let output = ''
       //desencryt  here e.payload.value
       output +=
