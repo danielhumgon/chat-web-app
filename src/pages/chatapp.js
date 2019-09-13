@@ -2,7 +2,10 @@
 import React from 'react'
 import { Users } from '../components/ipfs/Users'
 import { Chat } from '../components/ipfs/Chat'
-import styled from 'styled-components'
+import { Status } from '../components/ipfs/Status'
+import Layout from '../components/layout'
+import { Buffer } from 'ipfs'
+import Helmet from 'react-helmet'
 const IPFS = typeof window !== `undefined` ? require('ipfs') : null
 const OrbitDB = typeof window !== `undefined` ? require('orbit-db') : null
 
@@ -21,31 +24,12 @@ let db
 
 let _this
 
-const ContainerFlex = styled.div`
-  display: flex;
-  padding: 1em;
-`
-const SpanText = styled.span`
-  margin: 1em;
-`
-const ContainerStatus = styled.div`
-  width: 100%;
-  padding: 1em;
-`
 
-const ContainerUsers = styled.div`
-  width: 40%;
-  text-align: center;
-`
-const ContainerChat = styled.div`
-  width: 60%;
-  text-align: center;
-`
 export class chatapp extends React.Component {
   state = {
     ipfs: null,
     orbitdb: null,
-    masterConected: false,
+    masterConnected: false,
     onlineNodes: [],
     ipfsId: '',
     channelSend: 'ipfsObitdb-chat',
@@ -61,6 +45,7 @@ export class chatapp extends React.Component {
     super(props)
     _this = this
     if (!IPFS || !OrbitDB) return
+    if (_this.state.ipfs) return
     //connect to IPFS
     const ipfs = new IPFS({
       repo: './orbitdbipfs/chatapp/ipfs',
@@ -104,6 +89,9 @@ export class chatapp extends React.Component {
       // Multiple connections will blacklist the server.
       await _this.state.ipfs.swarm.connect(MASTER_MULTIADDR)
       console.log(`Connected to master node.`)
+      _this.setState({
+        masterConnected: true,
+      })
 
       //Instantiated db key value for store my username
       try {
@@ -127,6 +115,7 @@ export class chatapp extends React.Component {
       //subscribe to master channel
       channelsSuscriptions.push(PUBSUB_CHANNEL)
       _this.state.ipfs.pubsub.subscribe(PUBSUB_CHANNEL, data => {
+
         const jsonData = JSON.parse(data.data.toString())
         if (jsonData.onlineNodes) {
           let onlineUsers = []
@@ -141,6 +130,7 @@ export class chatapp extends React.Component {
             _this.setState({
               onlineNodes: [...onlineUsers],
             })
+
           }
         }
         //recived status online to master for control my status
@@ -156,6 +146,7 @@ export class chatapp extends React.Component {
 
       //send status online to master for control online users
       setInterval(() => {
+        if (!_this.state.ipfs) return
         const msg = { status: 'online', username: _this.state.username }
         const msgEncoded = Buffer.from(JSON.stringify(msg))
         _this.state.ipfs.pubsub.publish(PUBSUB_CHANNEL, msgEncoded, err => {
@@ -164,7 +155,8 @@ export class chatapp extends React.Component {
           }
         })
         // verify my connection status
-        if ((new Date() - myDateConnection) / 1500 > 5) {
+
+        if ((new Date() - myDateConnection) / 1500 > 6) {
           _this.setState({
             isConnected: false,
           })
@@ -194,73 +186,49 @@ export class chatapp extends React.Component {
 
   render() {
     return (
-      <div>
-        <ContainerStatus>
-          <SpanText>
-            NODE IPFS:{' '}
-            <b>
-              {_this.state.ipfs === null
-                ? ` Not Instantiated`
-                : ` Instantiated`}
-            </b>
-          </SpanText>
-          <SpanText>
-            ORBITDB:
-            <b>
-              {_this.state.orbitdb === null
-                ? ` Not Instantiated  `
-                : `Instantiated  `}
-            </b>
-          </SpanText>
-          <SpanText>
-            IPFS CONNECTION:{' '}
-            <b>
-              {_this.state.masterConected === false
-                ? ` Connecting to master ....  `
-                : ` Connected!!  `}
-            </b>
-          </SpanText>
-          <SpanText>
-            CHAT STATUS:{' '}
-            <b>
-              {_this.state.isConnected === false
-                ? ` Disconnected  `
-                : ` Connected!!  `}
-            </b>
-          </SpanText>
-        </ContainerStatus>
-        <ContainerFlex>
-          <ContainerUsers>
-            <Users
-              ipfs={_this.state.ipfs}
-              orbitdb={_this.state.orbitdb}
-              onlineNodes={_this.state.onlineNodes}
-              PUBSUB_CHANNEL={PUBSUB_CHANNEL}
-              ipfsId={_this.state.ipfsId}
-              requestPersonChat={_this.requestPersonChat}
-              updateChatName={_this.updateChatName}
-            ></Users>
-          </ContainerUsers>
-          <ContainerChat>
-            {_this.state.dbIsReady ? (
-              <Chat
+      <Layout>
+        <Helmet>
+          <title>Chat - Forty by HTML5 UP</title>
+          <meta name="description" content="Elements Page" />
+        </Helmet>
+        <Status
+          ipfs={_this.state.ipfs}
+          orbitdb={_this.state.orbitdb}
+          isConnected={_this.state.isConnected}
+          masterConnected={_this.state.masterConnected}
+        ></Status>
+        <div className="grid-wrapper">
+          <div className="col-4">
+            <div >
+              <Users
                 ipfs={_this.state.ipfs}
                 orbitdb={_this.state.orbitdb}
-                ipfsId={_this.state.ipfsId}
-                output={_this.state.output}
-                channelSend={_this.state.channelSend}
+                onlineNodes={_this.state.onlineNodes}
                 PUBSUB_CHANNEL={PUBSUB_CHANNEL}
-                username={_this.state.username}
-                query={_this.query}
-                changeUserName={_this.getUserName}
-                chatWith={_this.state.chatWith}
-              ></Chat>
-            ) : (
-              <p>Loading Chat...</p>
-            )}
-          </ContainerChat>
-        </ContainerFlex>
-      </div>
+                ipfsId={_this.state.ipfsId}
+                requestPersonChat={_this.requestPersonChat}
+                updateChatName={_this.updateChatName}
+              ></Users>
+            </div>
+          </div>
+          <div className="col-8">
+            <Chat
+              ipfs={_this.state.ipfs}
+              orbitdb={_this.state.orbitdb}
+              ipfsId={_this.state.ipfsId}
+              dbIsReady={_this.state.dbIsReady}
+              output={_this.state.output}
+              channelSend={_this.state.channelSend}
+              PUBSUB_CHANNEL={PUBSUB_CHANNEL}
+              username={_this.state.username}
+              query={_this.query}
+              changeUserName={_this.getUserName}
+              chatWith={_this.state.chatWith}
+            ></Chat>
+          </div>
+        </div>
+
+      </Layout>
     )
   }
 
@@ -281,8 +249,11 @@ export class chatapp extends React.Component {
       await _this.state.ipfs.swarm.connect(MASTER_MULTIADDR)
 
       _this.setState({
-        masterConected: true,
+        masterConnected: true,
       })
+      setTimeout(() => {
+        console.log(_this.state.masterConnected)
+      }, 1000);
     } catch (err) {
       await _this.sleep(5000)
       await _this.repeatedConnect(ipfs)
@@ -290,6 +261,7 @@ export class chatapp extends React.Component {
   }
 
   async createDb(db_addrs, createNew = false) {
+
     try {
       const access = {
         accessController: {
@@ -299,7 +271,23 @@ export class chatapp extends React.Component {
       }
       db = await _this.state.orbitdb.eventlog(db_addrs, access)
 
+      /*
+      let _index = 0;
+      let flag = true;
+      const latest = [];
+      // progresive load db
+      db.events.on('load.progress', (address, hash, entry, progress, total) => {
+        _index++;
+        latest.push(entry);
+        //console.log(entry)
+        if (_index > 10 && flag) {
+          flag = false;
+          //_this.queryGet()
+          _this.progresiveOuput(latest)
+        }
+      })*/
       await db.load()
+
 
       _this.setState({
         dbIsReady: true,
@@ -311,11 +299,33 @@ export class chatapp extends React.Component {
         _this.queryGet()
         console.warn('replicated event')
       })
+      db.events.on('replicate', db_addrs => {
+        _this.queryGet()
+        console.warn('repli event')
+      })
+
     } catch (e) {
       console.error(e)
     }
   }
-
+  async progresiveOuput(latestMsg) {
+    console.log("query get")
+    try {
+      let latestMessages = latestMsg//db.iterator({ limit: 10 }).collect()
+      let output = ''
+      //desencryt  here e.payload.value
+      output +=
+        latestMessages
+          .reverse()
+          .map(e => e.payload.value.nickname + ' : ' + e.payload.value.message)
+          .join('\n') + `\n`
+      _this.setState({
+        output: output,
+      })
+    } catch (e) {
+      console.error(e)
+    }
+  }
   async subscribe(channelName) {
     if (_this.state.ipfs) return
     channelsSuscriptions.push(channelName)
@@ -339,8 +349,9 @@ export class chatapp extends React.Component {
     }
   }
   async queryGet() {
+    console.log("query get")
     try {
-      let latestMessages = db.iterator({ limit: 10 }).collect()
+      let latestMessages = db.iterator({ limit: 100 }).collect()
       let output = ''
       //desencryt  here e.payload.value
       output +=

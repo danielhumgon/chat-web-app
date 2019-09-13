@@ -1,10 +1,14 @@
 import React from 'react';
 import PropTypes from 'prop-types'
 import styled from 'styled-components'
-
+import { Buffer } from 'ipfs'
 
 let _this
 
+const ChatContainer = styled.div`
+  padding: 1em;
+  padding-left:0px!important
+`
 const ContainerSend = styled.div`
   display: flex;
   margin-bottom: 25px;
@@ -20,6 +24,7 @@ margin-bottom: 0.5em!important;
    background-color: rgba(0,0,0,0.1)!important;
    width: 100%;
     margin: 0 auto;
+    text-align:center;
 `
 export class Chat extends React.Component {
 
@@ -37,6 +42,7 @@ export class Chat extends React.Component {
         status: "message"
       },
       chatWith: 'All',
+      dbIsReady: false,
 
     };
 
@@ -45,23 +51,44 @@ export class Chat extends React.Component {
 
   render() {
     return (
-      <div>
-      <ChatName>Chat With :  <b>{_this.state.chatWith}</b></ChatName>
-        <textarea id="chatArea" name="chatArea" rows="10" cols="50" readOnly value={_this.props.output}>
+      <ChatContainer>
+        {_this.state.dbIsReady ?
+           <ChatName>Chat With : <b>{_this.state.chatWith}</b></ChatName> :
+           <ChatName> <b>Loading Chat..</b></ChatName>}
+
+        <textarea id="chatArea"
+          name="chatArea"
+          rows="10"
+          cols="50"
+          readOnly
+          value={_this.props.output}>
         </textarea>
         <br></br>
         <br></br>
         <ContainerSend>
-          <InputNickname type="text" id="nickname" name="nickname" placeholder="nickname"></InputNickname>
-          <input id="msg" name="msg" type="text" placeholder="type message" onKeyPress={(ev) => {
-            if (ev.key === 'Enter') {
-              _this.handleUpdateMsg()
-              ev.preventDefault();
-            }
-          }}></input>
-          <button onClick={this.handleUpdateMsg}>Send.</button>
+          <InputNickname
+            disabled={!_this.state.dbIsReady}
+            type="text" id="nickname"
+            name="nickname"
+            placeholder="nickname">
+          </InputNickname>
+          <input
+            disabled={!_this.state.dbIsReady}
+            id="msg"
+            name="msg"
+            type="text"
+            placeholder="type message"
+            onKeyPress={(ev) => {
+              if (ev.key === 'Enter') {
+                _this.handleUpdateMsg()
+                ev.preventDefault();
+              }
+            }}></input>
+          <button 
+          disabled={!_this.state.dbIsReady} 
+          onClick={this.handleUpdateMsg}>Send.</button>
         </ContainerSend>
-      </div>
+      </ChatContainer>
     );
   }
 
@@ -81,7 +108,7 @@ export class Chat extends React.Component {
     }))
     _this.sendMessg(nicknameValue, msgValue, _this.props.channelSend, false);
     document.getElementById("msg").value = ""
-    _this.props.changeUserName(true,nicknameValue)
+    _this.props.changeUserName(true, nicknameValue)
   }
   async sendMessg(nickname, message, channel, useLocalChannel) {
     if (!_this.state.ipfs) return;
@@ -91,7 +118,7 @@ export class Chat extends React.Component {
     // eslint-disable-next-line
     const id = _this.state.ipfsId
     const msgText = { username: userName, message: message, status: "message" }
-    const msgEncoded = _this.state.ipfs.types.Buffer.from(JSON.stringify(msgText))
+    const msgEncoded = Buffer.from(JSON.stringify(msgText))
     _this.state.ipfs.pubsub.publish(ch, msgEncoded)
    /* if (_this.props.channelSend == _this.props.PUBSUB_CHANNEL)*/ _this.props.query(userName, msgText.message);
   }
@@ -112,13 +139,17 @@ export class Chat extends React.Component {
           message: "",
           status: "message"
         },
-        chatWith:this.props.chatWith,
+        chatWith: this.props.chatWith,
       })
       if (this.props.username !== prevProps.username) {
         const usernameElement = document.getElementById("nickname")
         usernameElement.value = this.props.username
       }
-
+      if (this.props.dbIsReady !== prevProps.dbIsReady) {
+        this.setState({
+          dbIsReady: this.props.dbIsReady
+        })
+      }
     }
   }
 }
@@ -134,6 +165,7 @@ Chat.propTypes = {
   changeUserName: PropTypes.func,
   username: PropTypes.string,
   chatWith: PropTypes.string,
+  dbIsReady: PropTypes.bool
 
 }
 export default Chat;
