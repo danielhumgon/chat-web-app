@@ -54,19 +54,19 @@ export class Users extends React.Component {
         );
     }
 
-
+    // Controller for the changes in the chat and channels
     async subscribeToOtherChannel(value) {
         let channelName;
 
         let chatName = ''
-        if (value === _this.props.PUBSUB_CHANNEL) {
+        if (value === _this.props.PUBSUB_CHANNEL) { //Goes back to group chat (ALL)
 
             if (_this.state.chatWith === 'All') return
             //  changeCh(PUBSUB_CHANNEL)
             chatName = 'All'
-            channelName = await _this.props.requestPersonChat(value, true)
+            channelName = await _this.props.requestPersonChat(value, true) //
 
-        } else if (_this.state.ipfsId != value.keyId) {
+        } else if (_this.state.ipfsId != value.keyId) {// goes in a private chat
 
             if (_this.state.chatWith === value.username) return
             chatName = value.username

@@ -6,21 +6,24 @@ import { Status } from '../components/ipfs/Status'
 import Layout from '../components/layout'
 import { Buffer } from 'ipfs'
 import Helmet from 'react-helmet'
+
+//Imports OrbitDB and IPFS, preventing the HTML5 error on build
 const IPFS = typeof window !== `undefined` ? require('ipfs') : null
 const OrbitDB = typeof window !== `undefined` ? require('orbit-db') : null
 
+
+//Addresses to make the connection
 //const MASTER_MULTIADDR = `/ip4/138.68.212.34/tcp/4003/ws/ipfs/QmauKY7Sh47ZD49oy9VT1e9djHXmUjXfP6qPn4CnbEcXSn`
 const MASTER_MULTIADDR = `/dns4/wss.psfoundation.cash/tcp/443/wss/ipfs/QmauKY7Sh47ZD49oy9VT1e9djHXmUjXfP6qPn4CnbEcXSn`
-
 let DB_ADDRESS = `/orbitdb/zdpuAzAkWaD6niC8AjSt1jb1pVx9fwECFC96dsczSQvTrH1Di/orbitddbchatappipfs987979`
 
 let myDateConnection = new Date()
-let PUBSUB_CHANNEL = 'ipfsObitdb-chat'
-const DB_NAME_CONTROL_USERNAMES = 'controlUsersName1234885'
+let PUBSUB_CHANNEL = 'ipfsObitdb-chat'//Name of the main channel for IPFS pubsub
+const DB_NAME_CONTROL_USERNAMES = 'controlUsersName1234885' //Database name to store the username
 let channelsSuscriptions = []
-let myNameStoreKey = 'myUsername'
+let myNameStoreKey = 'myUsername'// key from get username from db
 let db_nicknameControl
-let db
+let db 
 
 let _this
 
@@ -32,9 +35,9 @@ export class chatapp extends React.Component {
     masterConnected: false,
     onlineNodes: [],
     ipfsId: '',
-    channelSend: 'ipfsObitdb-chat',
-    output: '',
-    isConnected: false,
+    channelSend: 'ipfsObitdb-chat', //Channel where messages are going to be sent
+    output: '',  //saves chat messages to be visualized
+    isConnected: false, // Controls connection status
     success: false,
     username: 'Node' + Math.floor(Math.random() * 900 + 100).toString(),
     chatWith: 'All',
@@ -45,7 +48,7 @@ export class chatapp extends React.Component {
     super(props)
     _this = this
     if (!IPFS || !OrbitDB) return
-    if (_this.state.ipfs) return
+    if (_this.state.ipfs) return //Checks if already exists a node
     //connect to IPFS
     const ipfs = new IPFS({
       repo: './orbitdbipfs/chatapp/ipfs',
@@ -108,7 +111,7 @@ export class chatapp extends React.Component {
       } catch (e) {
         console.error(e)
       }
-      _this.getUserName()
+      _this.getUserName() // get my last username 
 
       _this.createDb(DB_ADDRESS) // create db
 
@@ -117,7 +120,7 @@ export class chatapp extends React.Component {
       _this.state.ipfs.pubsub.subscribe(PUBSUB_CHANNEL, data => {
 
         const jsonData = JSON.parse(data.data.toString())
-        if (jsonData.onlineNodes) {
+        if (jsonData.onlineNodes) { // controller for online nodes in the chat app
           let onlineUsers = []
           for (var nodes in jsonData.onlineNodes) {
             jsonData.onlineNodes[nodes].username
@@ -154,8 +157,8 @@ export class chatapp extends React.Component {
             return console.error(`failed to publish to ${PUBSUB_CHANNEL}`, err)
           }
         })
-        // verify my connection status
 
+        // verify my connection status, verifies the time that has without receiving messages from master node   
         if ((new Date() - myDateConnection) / 1500 > 6) {
           _this.setState({
             isConnected: false,
@@ -164,16 +167,17 @@ export class chatapp extends React.Component {
         }
       }, 1000)
 
-      // subscribe to my owned channel
+      //Subscribe to my own channel.
+      //This subscription controls the peer to peer petitions
       channelsSuscriptions.push(ipfsId.id)
       _this.state.ipfs.pubsub.subscribe(ipfsId.id, data => {
         const jsonData = JSON.parse(data.data.toString())
-        if (jsonData.peer1 === ipfsId.id) {
+        if (jsonData.peer1 === ipfsId.id) { //Checks if i'm the one who makes the petition
           _this.setState({
             channelSend: jsonData.channelName,
           })
           let flag = true
-          _this.createDb(jsonData.dbName, true)
+          _this.createDb(jsonData.dbName, true) // create db for p2p chat
           for (let i = 0; i < channelsSuscriptions.length; i++)
             // verify existing subscriptions
             if (flag && channelsSuscriptions[i] === jsonData.channelName)
@@ -259,7 +263,7 @@ export class chatapp extends React.Component {
       await _this.repeatedConnect(ipfs)
     }
   }
-
+  // create event log db
   async createDb(db_addrs, createNew = false) {
 
     try {
@@ -272,6 +276,7 @@ export class chatapp extends React.Component {
       db = await _this.state.orbitdb.eventlog(db_addrs, access)
 
       /*
+      // for load progress 
       let _index = 0;
       let flag = true;
       const latest = [];
@@ -294,11 +299,12 @@ export class chatapp extends React.Component {
       })
 
       _this.queryGet()
-
+      //Event that activates after DB replication
       db.events.on('replicated', db_addrs => {
         _this.queryGet()
         console.warn('replicated event')
       })
+      //Event that activates before DB replication
       db.events.on('replicate', db_addrs => {
         _this.queryGet()
         console.warn('repli event')
@@ -308,12 +314,13 @@ export class chatapp extends React.Component {
       console.error(e)
     }
   }
+  // for load progrssive output 
   async progresiveOuput(latestMsg) {
     console.log("query get")
     try {
       let latestMessages = latestMsg//db.iterator({ limit: 10 }).collect()
       let output = ''
-      //desencryt  here e.payload.value
+      //desencrypt  here e.payload.value
       output +=
         latestMessages
           .reverse()
@@ -326,6 +333,7 @@ export class chatapp extends React.Component {
       console.error(e)
     }
   }
+  // for subscribe to  others channels
   async subscribe(channelName) {
     if (_this.state.ipfs) return
     channelsSuscriptions.push(channelName)
@@ -337,23 +345,24 @@ export class chatapp extends React.Component {
     })
     console.warn('subscribed to : ' + channelName)
   }
-
+  // add entry in the db
   async query(nickname, message) {
     try {
       const entry = { nickname: nickname, message: message }
-      //encryt  entry here
+      //encrypt  entry here
       await db.add(entry)
       _this.queryGet()
     } catch (e) {
       console.error(e)
     }
   }
+  // get entry's from db
   async queryGet() {
     console.log("query get")
     try {
-      let latestMessages = db.iterator({ limit: 10 }).collect()
+      let latestMessages = db.iterator({ limit: 10 }).collect() // change the limit , to load more data(messages)
       let output = ''
-      //desencryt  here e.payload.value
+      //desencrypt  here e.payload.value
       output +=
         latestMessages
           .map(e => e.payload.value.nickname + ' : ' + e.payload.value.message)
@@ -365,26 +374,30 @@ export class chatapp extends React.Component {
       console.error(e)
     }
   }
-
+  //Function that gets activated to create a private chat with another node
   async requestPersonChat(peerClient, reset) {
     if (_this.state.dbIsReady === false) return
     _this.setState({
       dbIsReady: false,
     })
+    // reset returns the chat to group channel (ALL)
     if (reset) {
       _this.createDb(DB_ADDRESS)
       return PUBSUB_CHANNEL
     }
+
     const myID = _this.state.ipfsId
     const clientId = peerClient.toString()
     const newChannelName = myID + clientId
+    
+    //DB name for private chat
     const newDbName = newChannelName + '1232772'
     const msg = {
-      status: 'requestChat',
+      status: 'requestChat', // key for request private chat
       channelName: newChannelName,
       dbName: newDbName,
-      peer1: myID,
-      peer2: clientId,
+      peer1: myID,//node that emits the petition
+      peer2: clientId, // node that receives the petition
       dbId: db.id,
     }
     const msgEncoded = Buffer.from(JSON.stringify(msg))
@@ -392,12 +405,13 @@ export class chatapp extends React.Component {
 
     return newChannelName
   }
+
   async updateChatName(chatname) {
     _this.setState({
       chatWith: chatname,
     })
   }
-
+  // query for  update my Username from key store db
   async getUserName(changeUserName, username) {
     if (changeUserName === true) {
       if (username === _this.state.username) return
@@ -409,11 +423,11 @@ export class chatapp extends React.Component {
     }
     try {
       const userName = await db_nicknameControl.get(myNameStoreKey)
-      if (userName) {
+      if (userName) { // if there is already a name stored, it uses it
         _this.setState({
           username: userName.username,
         })
-      } else {
+      } else { //if not, stores the name on the DB
         await db_nicknameControl.set(myNameStoreKey, {
           username: _this.state.username,
         })

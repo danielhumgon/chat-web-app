@@ -96,8 +96,8 @@ export class Chat extends React.Component {
 
   handleUpdateMsg(event) {
 
-    const msgValue = document.getElementById("msg").value
-    const nicknameValue = document.getElementById("nickname").value
+    const msgValue = document.getElementById("msg").value // get message from input 
+    const nicknameValue = document.getElementById("nickname").value // get username from input
     _this.setState(prevState => ({
       ...prevState,
       message: {
@@ -110,6 +110,7 @@ export class Chat extends React.Component {
     document.getElementById("msg").value = ""
     _this.props.changeUserName(true, nicknameValue)
   }
+  //Sends a message  to a specific channel
   async sendMessg(nickname, message, channel, useLocalChannel) {
     if (!_this.state.ipfs) return;
     let ch = channel
@@ -120,7 +121,8 @@ export class Chat extends React.Component {
     const msgText = { username: userName, message: message, status: "message" }
     const msgEncoded = Buffer.from(JSON.stringify(msgText))
     _this.state.ipfs.pubsub.publish(ch, msgEncoded)
-   /* if (_this.props.channelSend == _this.props.PUBSUB_CHANNEL)*/ _this.props.query(userName, msgText.message);
+   /* if (_this.props.channelSend == _this.props.PUBSUB_CHANNEL)*/ 
+   _this.props.query(userName, msgText.message);
   }
   componentDidMount() {
     const usernameElement = document.getElementById("nickname")
